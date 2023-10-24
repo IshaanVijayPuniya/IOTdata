@@ -16,6 +16,8 @@ from keras.models import Sequential
 from keras.layers import LSTM, Dense, Dropout
 from keras.layers import Conv1D, MaxPooling1D, Flatten
 from keras.callbacks import EarlyStopping
+from sklearn.model_selection import GridSearchCV
+from sklearn.metrics import make_scorer, f1_score
 
 downloads_folder = r"C:\Users\ishaa\Downloads\archive" 
 file_list = [os.path.join(downloads_folder, filename) for filename in os.listdir(downloads_folder) if len(filename) < 8]
@@ -23,7 +25,18 @@ file_list = [os.path.join(downloads_folder, filename) for filename in os.listdir
 output
 Cooler condition : 3: close to total failure 20: reduced effifiency 100: full efficiency
 stable flag: 0: conditions were unstable  1: stable conditions
+
+
 """
+def create_lstm_model(x_train,lstm_units=64, dropout_rate=0.5):
+    model = Sequential()
+    model.add(LSTM(lstm_units, return_sequences=True, input_shape=(x_train.shape[1], x_train.shape[2])))
+    model.add(Dropout(dropout_rate))
+    model.add(LSTM(lstm_units))
+    model.add(Dropout(dropout_rate))
+    model.add(Dense(1, activation='sigmoid'))
+    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+    return model
 def build_train_model(data_folder, profile_file, window_size=5, lstm_units=64, dropout_rate=0.5, epochs=50, test_size=0.2):
     # Load data from files
     downloads_folder = data_folder
@@ -62,7 +75,7 @@ def build_train_model(data_folder, profile_file, window_size=5, lstm_units=64, d
             plt.plot(Dictionary_data_values[title][v], color = 'blue', alpha=0.5)
         plt.plot(Dictionary_data_values[title][unstables[num]], label='unstable', color ='red', alpha=0.7)
         plt.legend(loc='upper right')
-        plt.savefig(f'{title}.jpg')
+        
     
 
     def preprocess_data(data_dict, size=1):
@@ -75,14 +88,32 @@ def build_train_model(data_folder, profile_file, window_size=5, lstm_units=64, d
             elif values.shape[1] == 600:
                 values = values[:, ::10] # STEPS of 10 to make 60 rows
             assert values.shape[1] == 60
-
+            """
+        
+            numpy.convolve(a, v, mode='full')[source]
+                Returns the discrete, linear convolution of two one-dimensional sequences
+                
+            """
             values = NumericalPython.apply_along_axis(lambda x: NumericalPython.convolve(x, NumericalPython.ones(size) / size, mode='valid'), axis=1, arr=values)
+            """
+                            Ni, Nk = a.shape[:axis], a.shape[axis+1:]
+                for ii in ndindex(Ni):
+                    for kk in ndindex(Nk):
+                        f = func1d(arr[ii + s_[:,] + kk])
+                        Nj = f.shape
+                        for jj in ndindex(Nj):
+                            out[ii + jj + kk] = f[jj]
+            """
             scaler = MinMaxScaler() # We can also use Standard scaler
             values = scaler.fit_transform(values)
             if x is None:
-                x = values.reshape(1, values.shape[0], values.shape[1] - size)
+                x = values.reshape(1, values.shape[0],61 - size)  # some bug with shape[1]
             else:
-                x = NumericalPython.concatenate((x, values.reshape(1, values.shape[0], values.shape[1] - size)))
+                x = NumericalPython.concatenate((x, values.reshape(1, values.shape[0], 61 - size)))
+                """
+                numpy.concatenate((a1, a2, ...), axis=0, out=None, dtype=None, casting="same_kind")
+                Join a sequence of arrays along an existing axis.
+                """
         x = NumericalPython.transpose(x, (1, 2, 0))
         return x
 
@@ -91,15 +122,8 @@ def build_train_model(data_folder, profile_file, window_size=5, lstm_units=64, d
     x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=test_size)
     
     # Build the model
-    model = Sequential()
-    model.add(LSTM(lstm_units, return_sequences=True, iNumericalPythonut_shape=(x.shape[1], x.shape[2])))
-    model.add(Dropout(dropout_rate))
-    model.add(LSTM(lstm_units))
-    model.add(Dropout(dropout_rate))
-    model.add(Dense(1, activation='sigmoid'))
-    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-    early_stopping = EarlyStopping(monitor='val_loss', patience=5, verbose=1, restore_best_weights=True)
    
+    """
     model2 = Sequential()
     model2.add(Conv1D(64, kernel_size=3, activation='relu', input_shape=(x.shape[1], x.shape[2])))
     model2.add(MaxPooling1D(pool_size=2))
@@ -109,12 +133,42 @@ def build_train_model(data_folder, profile_file, window_size=5, lstm_units=64, d
     model2.add(Dense(1, activation='sigmoid'))
     model2.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
     early_stopping = EarlyStopping(monitor='val_loss', patience=5, verbose=1, restore_best_weights=True)
-
     # Train the CNN model
     history2 = model2.fit(x_train, y_train, epochs=epochs, validation_data=(x_test, y_test), callbacks=[early_stopping])
+    """
+    
+    # Specify the hyperparameters and their possible values
+    param_grid = {
+        'lstm_units': [32, 64, 128],
+        'dropout_rate': [0.3, 0.5, 0.7],
+        'epochs': [50, 100, 150],
+    }
+    
+    # Create GridSearchCV object
+    grid_search = GridSearchCV(estimator=create_lstm_model(x_train), param_grid=param_grid, scoring=make_scorer(f1_score), cv=3)
+    
+    # Fit the GridSearchCV to your data
+    grid_search.fit(x_train, y_train)
+    
+    # Get the best parameters and best model
+    best_params = grid_search.best_params_
+    best_model = grid_search.best_estimator_
+    
+    # Print the best parameters
+    print("Best Parameters: ", best_params)
 
+    # Train the best model with the best parameters
+    history=best_model.fit(x_train, y_train, epochs=best_params['epochs'], validation_data=(x_test, y_test), callbacks=[EarlyStopping(monitor='val_loss', patience=5, verbose=1, restore_best_weights=True)])
+
+    # Evaluate the best model on training and test data
+    train_loss, train_acc = best_model.evaluate(x_train, y_train)
+    test_loss, test_acc = best_model.evaluate(x_test, y_test)
+
+    print(f"Training Loss: {train_loss}, Training Accuracy: {train_acc}")
+    print(f"Test Loss: {test_loss}, Test Accuracy: {test_acc}")
     # Train the model
-    history = model.fit(x_train, y_train, epochs=epochs, validation_data=(x_test, y_test), callbacks=[early_stopping])
+   
+    
     plt.figure(figsize=(10, 5))
     plt.plot(history.history['loss'], label='Training Loss')
     plt.plot(history.history['val_loss'], label='Validation Loss')
@@ -124,27 +178,16 @@ def build_train_model(data_folder, profile_file, window_size=5, lstm_units=64, d
     plt.title('Training Loss vs. Validation Loss')
     plt.show()
     plt.figure(figsize=(10, 5))
-    plt.plot(history2.history2['loss'], label='Training Loss')
-    plt.plot(history2.history2['val_loss'], label='Validation Loss')
-    plt.xlabel('Epochs')
-    plt.ylabel('Loss')
-    plt.legend()
-    plt.title('Training Loss vs. Validation Loss')
-    plt.show()
+   
 
     # Evaluate the model on training and test data
-    train_loss, train_acc = model.evaluate(x_train, y_train)
-    test_loss, test_acc = model.evaluate(x_test, y_test)
-
-    print(f"Training Loss: {train_loss}, Training Accuracy: {train_acc}")
-    print(f"Test Loss: {test_loss}, Test Accuracy: {test_acc}")
-    # Return the trained model and history
-    return model, history
+    
+    return best_model, history
 
 
 # Create a Flask web app
 
-
+build_train_model(downloads_folder,r"C:\Users\ishaa\Downloads\archive\profile.txt", window_size=5, lstm_units=64, dropout_rate=0.5, epochs=50, test_size=0.2)
     
 
 
