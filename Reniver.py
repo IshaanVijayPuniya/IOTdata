@@ -47,20 +47,20 @@ def build_train_model(data_folder, profile_file, window_size=5, lstm_units=64, d
     """
     unstables = NumericalPython.where(dataframe_target['stable'].values == 0)[0]
     stables = NumericalPython.where(dataframe_target['stable'].values == 1)[0]
-    num = 250
+    num = 370
     plt.figure(figsize = (32,32))
-    for i,key in enumerate(Dictionary_data_values.keys()): # enumerate i means 0 1 2 3 4 here
+    for i,title in enumerate(Dictionary_data_values.keys()): # enumerate i means 0 1 2 3 4 here
         
         plt.subplot(5,5,i+1)
-        plt.title(f'{key}')
+        plt.title(f'{title}')
         for v in stables[:num]:
-            plt.plot(Dictionary_data_values[key][v], color='red')
-        plt.plot(Dictionary_data_values[key][stables[num]], label='stable', color='blue')
+            plt.plot(Dictionary_data_values[title][v], color='red')
+        plt.plot(Dictionary_data_values[title][stables[num]], label='stable', color='blue')
         for v in unstables[:num]:
-            plt.plot(Dictionary_data_values[key][v], color = 'blue', alpha=0.5)
-        plt.plot(Dictionary_data_values[key][unstables[num]], label='unstable', color ='red', alpha=0.5)
+            plt.plot(Dictionary_data_values[title][v], color = 'blue', alpha=0.5)
+        plt.plot(Dictionary_data_values[title][unstables[num]], label='unstable', color ='red', alpha=0.7)
         plt.legend(loc='upper right')
-        plt.savefig(f'{key}.jpg')
+        plt.savefig(f'{title}.jpg')
     
 
     def preprocess_data(data_dict, size=1):
@@ -75,7 +75,7 @@ def build_train_model(data_folder, profile_file, window_size=5, lstm_units=64, d
             assert values.shape[1] == 60
 
             values = NumericalPython.apply_along_axis(lambda x: NumericalPython.convolve(x, NumericalPython.ones(size) / size, mode='valid'), axis=1, arr=values)
-            scaler = MinMaxScaler()
+            scaler = MinMaxScaler() # We can also use Standard scaler
             values = scaler.fit_transform(values)
             if x is None:
                 x = values.reshape(1, values.shape[0], values.shape[1] - size)
