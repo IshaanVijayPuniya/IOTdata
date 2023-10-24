@@ -1,7 +1,6 @@
 
 """
 DATA pipeline for IOT data at RENIVER of a  langZuaner smart Hydarulic press
-You need to implement an endpoint with train function to train and predict models
 """
 
 from flask import Flask, request, jsonify
@@ -42,6 +41,27 @@ def build_train_model(data_folder, profile_file, window_size=5, lstm_units=64, d
     TARGET_NAMES = ["cooler", "valve", "leakage", "accumulator", "stable"]
 
     dataframe_target = pd.read_table(profile_file, names=TARGET_NAMES)
+    
+    """
+    The numpy.where() function is used in the provided code to find the indices of elements in an array that satisfy a particular condition
+    """
+    unstables = NumericalPython.where(dataframe_target['stable'].values == 0)[0]
+    stables = NumericalPython.where(dataframe_target['stable'].values == 1)[0]
+    num = 250
+    plt.figure(figsize = (32,32))
+    for i,key in enumerate(Dictionary_data_values.keys()): # enumerate i means 0 1 2 3 4 here
+        
+        plt.subplot(5,5,i+1)
+        plt.title(f'{key}')
+        for v in stables[:num-1]:
+            plt.plot(Dictionary_data_values[key][v], color='red')
+        plt.plot(Dictionary_data_values[key][stables[num]], label='stable', color='blue')
+        for v in unstables[:num]:
+            plt.plot(Dictionary_data_values[key][v], color = 'blue', alpha=0.5)
+        plt.plot(Dictionary_data_values[key][unstables[num]], label='unstable', color ='red', alpha=0.5)
+        plt.legend(loc='upper right')
+        plt.savefig(f'{key}.jpg')
+    
 
     def preprocess_data(data_dict, size=1):
         x = None
@@ -121,39 +141,8 @@ def build_train_model(data_folder, profile_file, window_size=5, lstm_units=64, d
 
 
 # Create a Flask web app
-app = Flask(__name__)
-TARGET_NAMES = ["cooler", "valve", "leakage", "accumulator", "stable"]
-def reading_from_file(file):
-    return NumericalPython.genfromtxt(file, dtype=float, delimiter='\t')
 
-Dictionary_data_values = {}
-for file in file_list:
-    data = reading_from_file(file)
-    file_name = file.split('/')[-1]
-    file_ = file_name.split('.')[0]
-    print(file_, data.shape)
-    Dictionary_data_values[file_] =  data
-dataframe_target = pd.read_table(r'C:\Users\ishaa\Downloads\archive/profile.txt' , names=TARGET_NAMES)
 
-unstables = NumericalPython.where(dataframe_target['stable'].values == 0)[0]
-stables = NumericalPython.where(dataframe_target['stable'].values == 1)[0]
-"""
-The numpy.where() function is used in the provided code to find the indices of elements in an array that satisfy a particular condition
-"""
-num = 250
-plt.figure(figsize = (32,32))
-for i,key in enumerate(Dictionary_data_values.keys()): # enumerate i means 0 1 2 3 4 here
-    
-    plt.subplot(5,5,i+1)
-    plt.title(f'{key}')
-    for v in stables[:num-1]:
-        plt.plot(Dictionary_data_values[key][v], color='red')
-    plt.plot(Dictionary_data_values[key][stables[num]], label='stable', color='blue')
-    for v in unstables[:num]:
-        plt.plot(Dictionary_data_values[key][v], color = 'blue', alpha=0.5)
-    plt.plot(Dictionary_data_values[key][unstables[num]], label='unstable', color ='red', alpha=0.5)
-    plt.legend(loc='upper right')
-    plt.savefig(f'{key}.jpg')
     
 
 
