@@ -28,9 +28,9 @@ stable flag: 0: conditions were unstable  1: stable conditions
 
 
 """
-def create_lstm_model(x_train,lstm_units=64, dropout_rate=0.5):
+def create_lstm_model(input_shape, lstm_units=64, dropout_rate=0.5):
     model = Sequential()
-    model.add(LSTM(lstm_units, return_sequences=True, input_shape=(x_train.shape[1], x_train.shape[2])))
+    model.add(LSTM(lstm_units, return_sequences=True, input_shape=input_shape))
     model.add(Dropout(dropout_rate))
     model.add(LSTM(lstm_units))
     model.add(Dropout(dropout_rate))
@@ -80,7 +80,10 @@ def build_train_model(data_folder, profile_file, window_size=5, lstm_units=64, d
 
     def preprocess_data(data_dict, size=1):
         x = None
-
+        """
+        
+        Df iloc can be used as well 
+        """
         for key in data_dict:
             values = data_dict[key]
             if values.shape[1] == 6000:
@@ -118,7 +121,7 @@ def build_train_model(data_folder, profile_file, window_size=5, lstm_units=64, d
         return x
 
     x = preprocess_data(Dictionary_data_values, window_size)
-    y = dataframe_target['stable'].values
+    y = dataframe_target['stable'].values  # change to cooler valve and make predictions on any
     x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=test_size)
     
     # Build the model
@@ -145,24 +148,20 @@ def build_train_model(data_folder, profile_file, window_size=5, lstm_units=64, d
     }
     
     # Create GridSearchCV object
-    grid_search = GridSearchCV(estimator=create_lstm_model(x_train), param_grid=param_grid, scoring=make_scorer(f1_score), cv=3)
+    model=create_lstm_model(x_train.shape[1:], lstm_units)
     
     # Fit the GridSearchCV to your data
-    grid_search.fit(x_train, y_train)
+    model.fit(x_train, y_train)
     
     # Get the best parameters and best model
-    best_params = grid_search.best_params_
-    best_model = grid_search.best_estimator_
     
-    # Print the best parameters
-    print("Best Parameters: ", best_params)
 
     # Train the best model with the best parameters
-    history=best_model.fit(x_train, y_train, epochs=best_params['epochs'], validation_data=(x_test, y_test), callbacks=[EarlyStopping(monitor='val_loss', patience=5, verbose=1, restore_best_weights=True)])
+    history=model.fit(x_train, y_train, epochs=epochs, validation_data=(x_test, y_test), callbacks=[EarlyStopping(monitor='val_loss', patience=5, verbose=1, restore_best_weights=True)])
 
     # Evaluate the best model on training and test data
-    train_loss, train_acc = best_model.evaluate(x_train, y_train)
-    test_loss, test_acc = best_model.evaluate(x_test, y_test)
+    train_loss, train_acc = model.evaluate(x_train, y_train)
+    test_loss, test_acc = model.evaluate(x_test, y_test)
 
     print(f"Training Loss: {train_loss}, Training Accuracy: {train_acc}")
     print(f"Test Loss: {test_loss}, Test Accuracy: {test_acc}")
@@ -182,7 +181,7 @@ def build_train_model(data_folder, profile_file, window_size=5, lstm_units=64, d
 
     # Evaluate the model on training and test data
     
-    return best_model, history
+    return model, history
 
 
 # Create a Flask web app
