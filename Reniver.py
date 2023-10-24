@@ -10,7 +10,7 @@ import numpy as NumericalPython # linear algebra
 import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
 import os
 import matplotlib.pyplot as plt
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import MinMaxScaler,StandardScaler
 from sklearn.model_selection import train_test_split
 from keras.models import Sequential
 from keras.layers import LSTM, Dense, Dropout
@@ -18,6 +18,7 @@ from keras.layers import Conv1D, MaxPooling1D, Flatten
 from keras.callbacks import EarlyStopping
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import make_scorer, f1_score
+import seaborn as sns
 
 downloads_folder = r"C:\Users\ishaa\Downloads\archive" 
 file_list = [os.path.join(downloads_folder, filename) for filename in os.listdir(downloads_folder) if len(filename) < 8]
@@ -28,6 +29,13 @@ stable flag: 0: conditions were unstable  1: stable conditions
 
 
 """
+
+def new_preprocess_data(data_dict):
+    # Add your preprocessing logic here
+    # For example, let's say we want to normalize the data
+     ss=StandardScaler()
+     normalize=ss.fit(data_dict)
+     return normalize
 def create_lstm_model(input_shape, lstm_units=64, dropout_rate=0.5):
     model = Sequential()
     model.add(LSTM(lstm_units, return_sequences=True, input_shape=input_shape))
@@ -121,7 +129,8 @@ def build_train_model(data_folder, profile_file, window_size=5, lstm_units=64, d
         return x
 
     x = preprocess_data(Dictionary_data_values, window_size)
-    y = dataframe_target['stable'].values  # change to cooler valve and make predictions on any
+    #x = new_preprocess_data(x)
+    y = dataframe_target['stable'].values
     x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=test_size)
     
     # Build the model
@@ -177,7 +186,45 @@ def build_train_model(data_folder, profile_file, window_size=5, lstm_units=64, d
     plt.title('Training Loss vs. Validation Loss')
     plt.show()
     plt.figure(figsize=(10, 5))
-   
+    def plot_data_model_history(X_train, y_train, X_test, y_test, history, model):
+        fig, axes = plt.subplots(nrows=2, ncols=3, figsize=(18, 10))
+        plt.subplots_adjust(wspace=0.2, hspace=0.5)
+    
+        # Plot data statistics
+        sns.countplot(y, ax=axes[0, 0])
+        axes[0, 0].set_title('Distribution of Stable/Unstable Data')
+        axes[0, 0].set_xlabel('Stable')
+        axes[0, 0].set_ylabel('Count')
+    
+        # Plot some example data
+        for i, (title, data) in enumerate(Dictionary_data_values.items()):
+            sns.lineplot(data=data[0], ax=axes[i//3, i%3])
+            axes[i//3, i%3].set_title(f'Data: {title}')
+            axes[i//3, i%3].set_xlabel('Time')
+            axes[i//3, i%3].set_ylabel('Value')
+    
+        # Plot model training history
+        axes[1, 0].plot(history.history['loss'], label='Training Loss')
+        axes[1, 0].plot(history.history['val_loss'], label='Validation Loss')
+        axes[1, 0].set_xlabel('Epochs')
+        axes[1, 0].set_ylabel('Loss')
+        axes[1, 0].legend()
+        axes[1, 0].set_title('Training Loss vs. Validation Loss')
+    
+        axes[1, 1].plot(history.history['accuracy'], label='Training Accuracy')
+        axes[1, 1].plot(history.history['val_accuracy'], label='Validation Accuracy')
+        axes[1, 1].set_xlabel('Epochs')
+        axes[1, 1].set_ylabel('Accuracy')
+        axes[1, 1].legend()
+        axes[1, 1].set_title('Training Accuracy vs. Validation Accuracy')
+    
+        # Evaluate the model on training and test data
+        train_loss, train_acc = model.evaluate(X_train, y_train)
+        test_loss, test_acc = model.evaluate(X_test, y_test)
+    
+        axes[1, 2].bar(['Training', 'Test'], [train_loss, test_loss])
+        axes[1, 2].set_title('Loss on Training and Test Data')
+        axes[1, 2]
 
     # Evaluate the model on training and test data
     
