@@ -31,8 +31,10 @@ stable flag: 0: conditions were unstable  1: stable conditions
 """
 
 def new_preprocess_data(data_dict):
-    # Add your preprocessing logic here
-    # For example, let's say we want to normalize the data
+    # to normalize the data
+    #The standard score of a sample x is calculated as
+    #z = (x - u) / s where u is the mean of the training samples or zero if with_mean=False, and s is the standard deviation of the training samples or one if with_std=False.
+    
      ss=StandardScaler()
      normalize=ss.fit(data_dict)
      return normalize
