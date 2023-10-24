@@ -12,6 +12,7 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
 from keras.models import Sequential
 from keras.layers import LSTM, Dense, Dropout
+from keras.layers import Conv1D, MaxPooling1D, Flatten
 from keras.callbacks import EarlyStopping
 
 downloads_folder = r"C:\Users\ishaa\Downloads\archive" 
@@ -75,12 +76,33 @@ def build_train_model(data_folder, profile_file, window_size=5, lstm_units=64, d
     model.add(Dense(1, activation='sigmoid'))
     model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
     early_stopping = EarlyStopping(monitor='val_loss', patience=5, verbose=1, restore_best_weights=True)
+   
+    model2 = Sequential()
+    model2.add(Conv1D(64, kernel_size=3, activation='relu', input_shape=(x.shape[1], x.shape[2])))
+    model2.add(MaxPooling1D(pool_size=2))
+    model2.add(Flatten())
+    model2.add(Dense(64, activation='relu'))
+    model2.add(Dropout(dropout_rate))
+    model2.add(Dense(1, activation='sigmoid'))
+    model2.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+    early_stopping = EarlyStopping(monitor='val_loss', patience=5, verbose=1, restore_best_weights=True)
+
+    # Train the CNN model
+    history2 = model2.fit(x_train, y_train, epochs=epochs, validation_data=(x_test, y_test), callbacks=[early_stopping])
 
     # Train the model
     history = model.fit(x_train, y_train, epochs=epochs, validation_data=(x_test, y_test), callbacks=[early_stopping])
     plt.figure(figsize=(10, 5))
     plt.plot(history.history['loss'], label='Training Loss')
     plt.plot(history.history['val_loss'], label='Validation Loss')
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.legend()
+    plt.title('Training Loss vs. Validation Loss')
+    plt.show()
+    plt.figure(figsize=(10, 5))
+    plt.plot(history2.history2['loss'], label='Training Loss')
+    plt.plot(history2.history2['val_loss'], label='Validation Loss')
     plt.xlabel('Epochs')
     plt.ylabel('Loss')
     plt.legend()
