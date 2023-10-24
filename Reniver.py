@@ -1,6 +1,8 @@
 
 """
 DATA pipeline for IOT data at RENIVER of a  langZuaner smart Hydarulic press
+
+PLEASE IMPLEMENT AN API ENDPOINT AND CALL THE TRAIN MODEL FUNCTION
 """
 
 from flask import Flask, request, jsonify
