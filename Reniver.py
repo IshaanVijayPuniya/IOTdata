@@ -53,7 +53,7 @@ def build_train_model(data_folder, profile_file, window_size=5, lstm_units=64, d
         
         plt.subplot(5,5,i+1)
         plt.title(f'{key}')
-        for v in stables[:num-1]:
+        for v in stables[:num]:
             plt.plot(Dictionary_data_values[key][v], color='red')
         plt.plot(Dictionary_data_values[key][stables[num]], label='stable', color='blue')
         for v in unstables[:num]:
@@ -69,9 +69,9 @@ def build_train_model(data_folder, profile_file, window_size=5, lstm_units=64, d
         for key in data_dict:
             values = data_dict[key]
             if values.shape[1] == 6000:
-                values = values[:, ::100]
+                values = values[:, ::100] # STEPS of 100 to make 60 rows
             elif values.shape[1] == 600:
-                values = values[:, ::10]
+                values = values[:, ::10] # STEPS of 10 to make 60 rows
             assert values.shape[1] == 60
 
             values = NumericalPython.apply_along_axis(lambda x: NumericalPython.convolve(x, NumericalPython.ones(size) / size, mode='valid'), axis=1, arr=values)
