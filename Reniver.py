@@ -1,6 +1,7 @@
 
 """
 DATA pipeline for IOT data at RENIVER of a  langZuaner smart Hydarulic press
+You need to implement an endpoint with train function to train and predict models
 """
 
 from flask import Flask, request, jsonify
